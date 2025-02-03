@@ -2,8 +2,10 @@ pipeline {
     agent any
 
 environment {
-        DOCKER_IMAGE = 'firstapp1'
+        DOCKER_REGISTRY = "urastogi74"
+        DOCKER_IMAGE = 'kubeapp'
         DOCKER_TAG = 'v1'
+        K8S_DEPLOYMENT_FILE = "deployment.yaml"
     }
 
     stages {
@@ -17,19 +19,39 @@ environment {
             steps {
                 script {
                     // Build the Docker image
-                  //  docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
-
-                sh 'docker build -f examples/Dockerfile -t $DOCKER_IMAGE:$DOCKER_TAG .'
+                
+                sh 'docker build -f Dockerfile -t $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG .'
                 }
             }
         }
-            stage('run Docker Image') {
+        stage('Push Docker Image') {
             steps {
                 script {
-                 sh  'docker run -p 3000:3000 $DOCKER_IMAGE:$DOCKER_TAG'
-                
+                    // Log in to Docker Hub and push the image
+                    sh 'docker login -u urastogi74 -p Umang@8052'
+                    sh 'docker push $DOCKER_REGISTRY/$IMAGE_NAME:$DOCKER_TAG'
                 }
-           }
             }
+        }
+          stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    // Set up Kubernetes access (use your kubeconfig or Kubernetes plugin)
+                    sh 'kubectl apply -f k8s/$K8S_DEPLOYMENT_FILE'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment Successful"
+        }
+
+        failure {
+            echo "Deployment Failed"
+        }
+    }
+}
     }
 }
